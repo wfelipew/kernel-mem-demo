@@ -36,7 +36,7 @@ static int get_pgd(struct seq_file *m, void *v){
 	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
-	unsigned long page_addr1, page_addr2, page_offset;
+	unsigned long page_with_flags, page_without_flags,  page_offset, phy_address;
 
 
 	/* Try to get task structure by pid */
@@ -94,9 +94,13 @@ static int get_pgd(struct seq_file *m, void *v){
                 return 0;
 	}
 	
-	/*Calculate offset address*/
-	page_addr1 = pte_val(*pte) ;
-	page_addr2 = pte_val(*pte) & PAGE_MASK ;
+	/*Remove flags bits from PTE using PAGE_MASK*/
+	page_with_flags = pte_val(*pte) ;
+	page_without_flags = pte_val(*pte) & PAGE_MASK ;
+
+	/*Sum page offset*/
+	phy_address = page_without_flags | page_offset;
+
 	
 
 	//seq_printf(m,"PID:%d  VirtualAddress:%d\n ",pagedemo_pid[0],pagedemo_pid[1]);
@@ -107,6 +111,11 @@ static int get_pgd(struct seq_file *m, void *v){
 	seq_printf(m,"PUD entry address: %lu\n",pud_val(*pud));
 	seq_printf(m,"PMD entry address: %lu\n",pmd_val(*pmd));
 	seq_printf(m,"PTE entry address: %lu\n",pte_val(*pte));
+	
+	seq_printf(m,"\n\nPAGE (with flags) entry address: %lu\n",page_with_flags);
+	seq_printf(m,"PAGE (without flags) entry address: %lu\n",page_without_flags);
+
+	seq_printf(m,"Virtual Adress:%lu Physical Address:%lu\n",pagedemo_pid[1],phy_address);
 
 	return 0;
 }
