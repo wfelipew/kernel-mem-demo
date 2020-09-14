@@ -1,13 +1,14 @@
-#include<linux/module.h>
-#include<linux/init.h>
-#include<linux/kernel.h>
-#include<linux/debugfs.h>
+#include <linux/module.h>
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/debugfs.h>
 #include <linux/proc_fs.h>
-#include<linux/sysctl.h>
+#include <linux/sysctl.h>
 #include <linux/sched.h>
 #include <linux/seq_file.h>
 #include <linux/mm.h>
 #include <asm/pgtable.h>
+#include <linux/highmem.h>
 
 
 
@@ -30,6 +31,7 @@ static struct ctl_table_header* pagedemo_header;
 static int get_pgd(struct seq_file *m, void *v){
 
 	pgd_t *start_pgd;
+	int cont = 0;
         unsigned long start_phy_addr;
 	pgd_t *pgd;
 	p4d_t *p4d;
@@ -37,6 +39,8 @@ static int get_pgd(struct seq_file *m, void *v){
 	pmd_t *pmd;
 	pte_t *pte;
 	unsigned long page_with_flags, page_without_flags,  page_offset, phy_address;
+	char *content;
+	struct page *page;
 
 
 	/* Try to get task structure by pid */
@@ -93,6 +97,14 @@ static int get_pgd(struct seq_file *m, void *v){
 		seq_printf(m,"Error: VirtualAddress is not mapped in PTE\n");
                 return 0;
 	}
+
+
+	/*Get page struct from PTE pointer*/
+	page = pte_page(*pte);
+	
+	/*Map page to kernel virtual adress*/
+	content= (char *) kmap(page);
+	
 	
 	/*Remove flags bits from PTE using PAGE_MASK*/
 	page_with_flags = pte_val(*pte) ;
@@ -103,8 +115,6 @@ static int get_pgd(struct seq_file *m, void *v){
 
 	
 
-	//seq_printf(m,"PID:%d  VirtualAddress:%d\n ",pagedemo_pid[0],pagedemo_pid[1]);
-	//seq_printf(m,"PID:%d  VirtualAddress:%d\n PGDStartAddress: 0x%0lx \n",pagedemo_pid[0],pagedemo_pid[1],(unsigned long)start_pgd);
 	seq_printf(m,"PID:%lu  VirtualAddress:%lu\n PGDStartAddress: 0x%0lx, 0x%0lx \n",pagedemo_pid[0],pagedemo_pid[1],(unsigned long)start_pgd, start_phy_addr);
 	seq_printf(m,"PGD entry address: %lu\n",pgd_val(*pgd));
 	seq_printf(m,"P4D entry address: %lu\n",p4d_val(*p4d));
@@ -114,8 +124,16 @@ static int get_pgd(struct seq_file *m, void *v){
 	
 	seq_printf(m,"\n\nPAGE (with flags) entry address: %lu\n",page_with_flags);
 	seq_printf(m,"PAGE (without flags) entry address: %lu\n",page_without_flags);
+	seq_printf(m,"PAGE offset: %lu\n",page_offset);
 
 	seq_printf(m,"Virtual Adress:%lu Physical Address:%lu\n",pagedemo_pid[1],phy_address);
+
+	/*Show memory content*/	
+	seq_printf(m,"Content :%s\n",content+page_offset);
+
+
+	/*Unmap  memory*/
+	kunmap(page);
 
 	return 0;
 }
@@ -159,4 +177,4 @@ module_exit(pagetable_exit);
 
 MODULE_AUTHOR("William Felipe Welter");
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Resolve physical memory address of a given virtual memory proccess of a given proccess");
+MODULE_DESCRIPTION("Resolve physical memory address of a given virtual memory proccess of a given proccess and show their content");
