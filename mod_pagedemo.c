@@ -31,7 +31,6 @@ static struct ctl_table_header* pagedemo_header;
 static int get_pgd(struct seq_file *m, void *v){
 
 	pgd_t *start_pgd;
-	int cont = 0;
         unsigned long start_phy_addr;
 	pgd_t *pgd;
 	p4d_t *p4d;
